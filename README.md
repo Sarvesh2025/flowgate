@@ -19,3 +19,19 @@ curl -s localhost:8082/api/payments
 ```
 
 Ports: gateway `8080`, orders `8081`, payments `8082`, Postgres `5432`, Redis `6379`.
+
+Rate limit (Phase 2): `GET /api/v1/limited` — 10 requests per 1000 ms. Switch algorithm in `application.yml` (`flowgate.ratelimit.algorithm`), then restart.
+
+| Algorithm | Use when |
+|---|---|
+| `TOKEN_BUCKET` | You want a steady rate and short bursts |
+| `SLIDING_WINDOW_COUNTER` | Cheap and smoother than a clock minute |
+| `SLIDING_WINDOW_LOG` | You need an exact count (more Redis memory) |
+| `FIXED_WINDOW` | Simplest counter; can double at the window edge |
+
+```bash
+for i in $(seq 1 15); do
+  curl -sS -o /dev/null -w "%{http_code} remaining=%header{x-ratelimit-remaining}\\n" \
+    http://localhost:8080/api/v1/limited
+done
+```

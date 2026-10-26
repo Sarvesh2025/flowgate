@@ -19,6 +19,14 @@ spring:
       host: ${FLOWGATE_REDIS_HOST:localhost}
       port: 6379
 
+flowgate:
+  ratelimit:
+    path: /api/v1/limited
+    # TOKEN_BUCKET | SLIDING_WINDOW_COUNTER | SLIDING_WINDOW_LOG | FIXED_WINDOW
+    algorithm: SLIDING_WINDOW_COUNTER
+    capacity: 10
+    window-ms: 1000
+
 management:
   endpoints:
     web:

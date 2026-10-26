@@ -35,3 +35,13 @@ The human owns every choice. Entries below that say **proposed (used in Phase 1)
 
 - **Question:** How much automated testing and documentation?
 - **Choice:** Not a test-heavy or docs-heavy repo. Prove slices with curl/Compose. At most a couple of later checks that prove Lua atomicity or two-instance sharing. One README to run the app. Decisions stay in this file. No ADR folder, no per-class unit tests.
+
+## D-006 — Token bucket first
+
+- **Question:** Which limiter to implement first?
+- **Choice:** Token bucket (slice 6). Other algorithms in later slices, same `Decision` return type.
+
+## D-007 — Default algorithm TOKEN_BUCKET
+
+- **Question:** Which algorithm does `/api/v1/limited` use until you change yaml?
+- **Choice:** `TOKEN_BUCKET`. Set `flowgate.ratelimit.algorithm: SLIDING_WINDOW_COUNTER` to switch. Restart the gateway after changing it.
