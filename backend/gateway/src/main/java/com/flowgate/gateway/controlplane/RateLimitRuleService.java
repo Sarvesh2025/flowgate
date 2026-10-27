@@ -6,6 +6,8 @@ import java.util.UUID;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.web.server.ResponseStatusException;
 
 @Service
@@ -19,10 +21,21 @@ public class RateLimitRuleService {
 
     private final RateLimitRuleRepository rules;
     private final RouteRepository routes;
+    private final RuleCache ruleCache;
+    private final ConfigChangePublisher publisher;
+    private final AuditService audit;
 
-    public RateLimitRuleService(RateLimitRuleRepository rules, RouteRepository routes) {
+    public RateLimitRuleService(
+            RateLimitRuleRepository rules,
+            RouteRepository routes,
+            RuleCache ruleCache,
+            ConfigChangePublisher publisher,
+            AuditService audit) {
         this.rules = rules;
         this.routes = routes;
+        this.ruleCache = ruleCache;
+        this.publisher = publisher;
+        this.audit = audit;
     }
 
     @Transactional(readOnly = true)
@@ -39,27 +52,46 @@ public class RateLimitRuleService {
     public RuleResponse create(RuleRequest request) {
         RateLimitRuleEntity entity = new RateLimitRuleEntity();
         apply(entity, request, true);
-        return RuleResponse.from(rules.save(entity));
+        RuleResponse after = RuleResponse.from(rules.save(entity));
+        audit.record("CREATE", after.id().toString(), null, after);
+        notifyChanged();
+        return after;
     }
 
     @Transactional
     public RuleResponse update(UUID id, RuleRequest request) {
         RateLimitRuleEntity entity = find(id);
+        RuleResponse before = RuleResponse.from(entity);
         apply(entity, request, false);
-        return RuleResponse.from(rules.save(entity));
+        RuleResponse after = RuleResponse.from(rules.save(entity));
+        audit.record("UPDATE", id.toString(), before, after);
+        notifyChanged();
+        return after;
     }
 
     @Transactional
     public void delete(UUID id) {
-        if (!rules.existsById(id)) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "rule not found");
-        }
-        rules.deleteById(id);
+        RateLimitRuleEntity entity = find(id);
+        RuleResponse before = RuleResponse.from(entity);
+        rules.delete(entity);
+        audit.record("DELETE", id.toString(), before, null);
+        notifyChanged();
     }
 
     private RateLimitRuleEntity find(UUID id) {
         return rules.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "rule not found"));
+    }
+
+    private void notifyChanged() {
+        TransactionSynchronizationManager.registerSynchronization(
+                new TransactionSynchronization() {
+                    @Override
+                    public void afterCommit() {
+                        ruleCache.reload();
+                        publisher.rulesChanged();
+                    }
+                });
     }
 
     private void apply(RateLimitRuleEntity entity, RuleRequest request, boolean creating) {

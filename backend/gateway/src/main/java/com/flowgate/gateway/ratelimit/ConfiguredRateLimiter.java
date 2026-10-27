@@ -26,12 +26,16 @@ public class ConfiguredRateLimiter {
     }
 
     public Decision allow(String key, int capacity, long windowMs) {
-        return switch (algorithm) {
+        return allow(algorithm, key, capacity, windowMs);
+    }
+
+    public Decision allow(String chosen, String key, int capacity, long windowMs) {
+        return switch (chosen) {
             case "TOKEN_BUCKET" -> tokenBucket.allow(key, capacity, windowMs);
             case "SLIDING_WINDOW_COUNTER" -> slidingWindowCounter.allow(key, capacity, windowMs);
             case "SLIDING_WINDOW_LOG" -> slidingWindowLog.allow(key, capacity, windowMs);
             case "FIXED_WINDOW" -> fixedWindow.allow(key, capacity, windowMs);
-            default -> throw new IllegalStateException("unknown algorithm: " + algorithm);
+            default -> throw new IllegalStateException("unknown algorithm: " + chosen);
         };
     }
 }
