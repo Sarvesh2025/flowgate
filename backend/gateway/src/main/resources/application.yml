@@ -20,6 +20,9 @@ spring:
       port: 6379
 
 flowgate:
+  jwt:
+    secret: flowgate-dev-secret-change-me-32b!!
+    expiration-ms: 900000
   ratelimit:
     path: /api/v1/limited
     # TOKEN_BUCKET | SLIDING_WINDOW_COUNTER | SLIDING_WINDOW_LOG | FIXED_WINDOW

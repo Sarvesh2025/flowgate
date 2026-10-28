@@ -10,10 +10,16 @@ import java.io.IOException;
 import java.util.Optional;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.core.Ordered;
+import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
+import com.flowgate.gateway.auth.ApiKeyPrincipal;
 
 @Component
+@Order(Ordered.LOWEST_PRECEDENCE)
 public class RateLimitFilter extends OncePerRequestFilter {
 
     private final ConfiguredRateLimiter limiter;
@@ -46,18 +52,19 @@ public class RateLimitFilter extends OncePerRequestFilter {
         }
         Decision decision;
         int limit;
+        String bucket = limiterKey();
         if (matched.isPresent()) {
             CachedRule rule = matched.get();
             limit = rule.limitCount();
             decision =
                     limiter.allow(
                             rule.algorithm(),
-                            "rule:" + rule.id(),
+                            "rule:" + rule.id() + ":" + bucket,
                             rule.limitCount(),
                             rule.windowMs());
         } else {
             limit = capacity;
-            decision = limiter.allow("global", capacity, windowMs);
+            decision = limiter.allow(bucket, capacity, windowMs);
         }
         response.setHeader("X-RateLimit-Limit", Integer.toString(limit));
         response.setHeader("X-RateLimit-Remaining", Long.toString(decision.remaining()));
@@ -67,5 +74,16 @@ public class RateLimitFilter extends OncePerRequestFilter {
             return;
         }
         chain.doFilter(request, response);
+    }
+
+    private static String limiterKey() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth != null && auth.getPrincipal() instanceof ApiKeyPrincipal key) {
+            return "apikey:" + key.id();
+        }
+        if (auth != null && auth.isAuthenticated() && auth.getPrincipal() instanceof String user) {
+            return "user:" + user;
+        }
+        return "anon";
     }
 }
