@@ -19,7 +19,7 @@ import org.springframework.web.filter.OncePerRequestFilter;
 import com.flowgate.gateway.auth.ApiKeyPrincipal;
 
 @Component
-@Order(Ordered.LOWEST_PRECEDENCE)
+@Order(Ordered.LOWEST_PRECEDENCE - 10)
 public class RateLimitFilter extends OncePerRequestFilter {
 
     private final ConfiguredRateLimiter limiter;

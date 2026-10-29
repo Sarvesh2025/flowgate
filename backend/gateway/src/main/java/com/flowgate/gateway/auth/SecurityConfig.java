@@ -1,5 +1,6 @@
 package com.flowgate.gateway.auth;
 
+import java.util.List;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -9,6 +10,7 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.web.cors.CorsConfiguration;
 
 @Configuration
 public class SecurityConfig {
@@ -23,6 +25,25 @@ public class SecurityConfig {
             HttpSecurity http, JwtAuthFilter jwtAuthFilter, ApiKeyAuthFilter apiKeyAuthFilter)
             throws Exception {
         return http.csrf(csrf -> csrf.disable())
+                .cors(
+                        c ->
+                                c.configurationSource(
+                                        request -> {
+                                            CorsConfiguration cors = new CorsConfiguration();
+                                            cors.setAllowedOriginPatterns(List.of("*"));
+                                            cors.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
+                                            cors.setAllowedHeaders(List.of("*"));
+                                            cors.setExposedHeaders(
+                                                    List.of(
+                                                            "X-Correlation-Id",
+                                                            "X-RateLimit-Limit",
+                                                            "X-RateLimit-Remaining",
+                                                            "X-Flowgate-Route",
+                                                            "X-Flowgate-Upstream",
+                                                            "X-Flowgate-Cache",
+                                                            "X-Flowgate-Canary"));
+                                            return cors;
+                                        }))
                 .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(
                         auth ->

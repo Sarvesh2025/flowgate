@@ -29,6 +29,13 @@ flowgate:
     algorithm: SLIDING_WINDOW_COUNTER
     capacity: 10
     window-ms: 1000
+  proxy:
+    connect-timeout-ms: 200
+    read-timeout-ms: 2000
+    max-body-bytes: 1048576
+    cache-ttl-seconds: 5
+    health-interval-ms: 10000
+    ip-allow: []
 
 management:
   endpoints:

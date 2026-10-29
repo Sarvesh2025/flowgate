@@ -20,6 +20,14 @@ curl -s localhost:8082/api/payments
 
 Ports: gateway `8080`, orders `8081`, payments `8082`, Postgres `5432`, Redis `6379`.
 
+Reverse proxy (Phase 5): `GET /gw/orders` and `GET /gw/payments` rewrite to the mock upstreams. Headers: `X-Correlation-Id`, `X-Flowgate-Route`, `X-Flowgate-Upstream` (round-robin / canary), `X-Flowgate-Cache`.
+
+```bash
+curl -sD - http://localhost:8080/gw/orders
+curl -sD - http://localhost:8080/gw/orders/ord-1
+curl -sD - http://localhost:8080/gw/payments
+```
+
 Rate limit (Phase 2): `GET /api/v1/limited` — 10 requests per 1000 ms. Switch algorithm in `application.yml` (`flowgate.ratelimit.algorithm`), then restart.
 
 | Algorithm | Use when |
