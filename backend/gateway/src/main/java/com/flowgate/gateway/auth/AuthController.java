@@ -89,7 +89,8 @@ public class AuthController {
                 "accessToken", jwt.create(username, role),
                 "tokenType", "Bearer",
                 "expiresInMs", jwt.expirationMs(),
-                "role", role);
+                "role", role,
+                "username", username);
     }
 
     private void addRefreshCookie(HttpServletResponse response, String jti) {

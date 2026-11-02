@@ -13,7 +13,7 @@ public class MetaController {
     public Map<String, String> meta() {
         return Map.of(
                 "name", "flowgate-gateway",
-                "phase", "6",
+                "phase", "7",
                 "role", "control-plane-and-data-plane");
     }
 }

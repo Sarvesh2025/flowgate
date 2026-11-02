@@ -57,9 +57,14 @@ public class SecurityConfig {
                                                 "/actuator/prometheus",
                                                 "/error")
                                         .permitAll()
-                                        .requestMatchers(HttpMethod.GET, "/api/v1/rules/**", "/api/v1/routes/**", "/api/v1/audit/**")
+                                        .requestMatchers(
+                                                HttpMethod.GET,
+                                                "/api/v1/rules/**",
+                                                "/api/v1/routes/**",
+                                                "/api/v1/audit/**",
+                                                "/api/v1/chaos/**")
                                         .hasAnyRole("ADMIN", "OPERATOR", "VIEWER")
-                                        .requestMatchers("/api/v1/rules/**")
+                                        .requestMatchers("/api/v1/rules/**", "/api/v1/routes/**", "/api/v1/chaos/**")
                                         .hasAnyRole("ADMIN", "OPERATOR")
                                         .requestMatchers("/api/v1/keys/**")
                                         .hasRole("ADMIN")

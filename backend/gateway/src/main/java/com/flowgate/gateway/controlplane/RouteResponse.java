@@ -19,7 +19,10 @@ public record RouteResponse(
 
     public record TargetView(UUID id, String url, int weight, boolean canary, boolean healthy) {}
 
-    static RouteResponse from(RouteEntity e, List<UpstreamTargetEntity> targets) {
+    static RouteResponse from(
+            RouteEntity e,
+            List<UpstreamTargetEntity> targets,
+            java.util.function.BiFunction<java.util.UUID, Boolean, Boolean> liveHealth) {
         return new RouteResponse(
                 e.getId(),
                 e.getRouteKey(),
@@ -39,7 +42,7 @@ public record RouteResponse(
                                                 t.getUrl(),
                                                 t.getWeight(),
                                                 t.isCanary(),
-                                                t.isHealthy()))
+                                                liveHealth.apply(t.getId(), t.isHealthy())))
                         .toList());
     }
 }

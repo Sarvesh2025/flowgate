@@ -10,7 +10,11 @@ public class TargetHealth {
     private final ConcurrentHashMap<UUID, Boolean> overlay = new ConcurrentHashMap<>();
 
     public boolean isHealthy(CachedTarget target) {
-        return overlay.getOrDefault(target.id(), target.seededHealthy());
+        return live(target.id(), target.seededHealthy());
+    }
+
+    public boolean live(UUID id, boolean fallback) {
+        return overlay.getOrDefault(id, fallback);
     }
 
     public void mark(UUID id, boolean healthy) {

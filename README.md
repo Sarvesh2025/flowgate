@@ -12,13 +12,16 @@ docker compose up -d   # needs Docker Desktop running
 ./scripts/mvn.sh -pl upstreams/orders spring-boot:run
 ./scripts/mvn.sh -pl upstreams/payments spring-boot:run
 
+cd frontend && npm install && npm run dev   # UI on http://localhost:3001
+# login admin / admin123
+
 curl -s localhost:8080/actuator/health
 curl -s localhost:8080/api/v1/meta
 curl -s localhost:8081/api/orders
 curl -s localhost:8082/api/payments
 ```
 
-Ports: gateway `8080`, orders `8081`, payments `8082`, Postgres `5432`, Redis `6379`, Prometheus `9090`, Grafana `3000` (admin/admin), Jaeger `16686`. Dashboard: **Flowgate**.
+Ports: gateway `8080`, orders `8081`, payments `8082`, Next.js UI `3001`, Postgres `5432`, Redis `6379`, Prometheus `9090`, Grafana `3000` (admin/admin), Jaeger `16686`.
 
 ```bash
 curl -s localhost:8080/actuator/prometheus | head

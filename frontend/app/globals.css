@@ -1,0 +1,19 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  @apply bg-zinc-950 text-zinc-100 antialiased;
+}
+
+.fg-input {
+  @apply rounded-md border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm outline-none focus:border-emerald-600;
+}
+
+.fg-btn {
+  @apply rounded-md bg-emerald-600 px-3 py-2 text-sm font-medium hover:bg-emerald-500 disabled:opacity-50;
+}
+
+.fg-card {
+  @apply rounded-lg border border-zinc-800 bg-zinc-900/40 p-4;
+}

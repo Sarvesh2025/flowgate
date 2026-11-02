@@ -12,6 +12,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
+import org.springframework.util.AntPathMatcher;
 
 @Component
 public class RuleCache {
@@ -22,6 +23,7 @@ public class RuleCache {
     private final RouteRepository routes;
     private final String defaultPath;
     private final TransactionTemplate tx;
+    private final AntPathMatcher paths = new AntPathMatcher();
     private final Cache<String, List<CachedRule>> cache = Caffeine.newBuilder().build();
 
     public RuleCache(
@@ -38,8 +40,18 @@ public class RuleCache {
 
     public Optional<CachedRule> match(String uri) {
         return snapshot().stream()
-                .filter(r -> r.path().equals(uri))
+                .filter(r -> pathMatches(r.path(), uri))
                 .max(Comparator.comparingInt(CachedRule::priority));
+    }
+
+    private boolean pathMatches(String pattern, String uri) {
+        if (pattern == null) {
+            return false;
+        }
+        if (pattern.equals(uri)) {
+            return true;
+        }
+        return paths.isPattern(pattern) && paths.match(pattern, uri);
     }
 
     public void reload() {

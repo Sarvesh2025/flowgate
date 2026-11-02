@@ -69,6 +69,22 @@ public class RouteEntity {
         return routeKey;
     }
 
+    public void setRouteKey(String routeKey) {
+        this.routeKey = routeKey;
+    }
+
+    public void setPathPattern(String pathPattern) {
+        this.pathPattern = pathPattern;
+    }
+
+    public void setMethods(String methods) {
+        this.methods = methods;
+    }
+
+    public void setRewritePrefix(String rewritePrefix) {
+        this.rewritePrefix = rewritePrefix;
+    }
+
     public String getPathPattern() {
         return pathPattern;
     }
@@ -91,6 +107,18 @@ public class RouteEntity {
 
     public boolean isEnabled() {
         return enabled;
+    }
+
+    public void setEnabled(boolean enabled) {
+        this.enabled = enabled;
+    }
+
+    public void setCanaryPercent(int canaryPercent) {
+        this.canaryPercent = canaryPercent;
+    }
+
+    public void setLbAlgorithm(String lbAlgorithm) {
+        this.lbAlgorithm = lbAlgorithm;
     }
 
     public Instant getCreatedAt() {
