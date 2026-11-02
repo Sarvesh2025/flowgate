@@ -1,6 +1,6 @@
 # Flowgate
 
-Java 21 API gateway (Spring Boot) with Redis + Postgres. Phase 1: infra and mock upstreams only.
+Java 21 API gateway (Spring Boot) with Redis + Postgres. Compose also runs Prometheus and Grafana.
 
 ```bash
 export JAVA_HOME="$HOME/sdk/jdk-21"
@@ -18,7 +18,14 @@ curl -s localhost:8081/api/orders
 curl -s localhost:8082/api/payments
 ```
 
-Ports: gateway `8080`, orders `8081`, payments `8082`, Postgres `5432`, Redis `6379`.
+Ports: gateway `8080`, orders `8081`, payments `8082`, Postgres `5432`, Redis `6379`, Prometheus `9090`, Grafana `3000` (admin/admin), Jaeger `16686`. Dashboard: **Flowgate**.
+
+```bash
+curl -s localhost:8080/actuator/prometheus | head
+curl -sN localhost:8080/api/v1/metrics/stream
+# Grafana: http://localhost:3000  (folder Flowgate)
+# Jaeger:  http://localhost:16686  (service flowgate-gateway)
+```
 
 Reverse proxy (Phase 5): `GET /gw/orders` and `GET /gw/payments` rewrite to the mock upstreams. Headers: `X-Correlation-Id`, `X-Flowgate-Route`, `X-Flowgate-Upstream` (round-robin / canary), `X-Flowgate-Cache`.
 

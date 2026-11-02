@@ -1,0 +1,10 @@
+groups:
+  - name: flowgate
+    rules:
+      - alert: FlowgateHighRateLimit
+        expr: sum(rate(flowgate_ratelimit_rejected_total[1m])) > 1
+        for: 30s
+        labels:
+          severity: warning
+        annotations:
+          summary: Gateway is rejecting more than 1 request per second

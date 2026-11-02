@@ -41,12 +41,31 @@ management:
   endpoints:
     web:
       exposure:
-        include: health,info
+        include: health,info,prometheus,metrics
   endpoint:
     health:
       show-details: always
+    prometheus:
+      enabled: true
+  prometheus:
+    metrics:
+      export:
+        enabled: true
+  tracing:
+    sampling:
+      probability: 1.0
+    propagation:
+      type: w3c
+  otlp:
+    tracing:
+      endpoint: ${FLOWGATE_OTLP_TRACES:http://localhost:4318/v1/traces}
   health:
     redis:
       enabled: true
     db:
       enabled: true
+
+logging:
+  structured:
+    format:
+      console: logstash

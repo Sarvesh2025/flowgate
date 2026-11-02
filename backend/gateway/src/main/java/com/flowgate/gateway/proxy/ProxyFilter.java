@@ -11,6 +11,9 @@ import org.springframework.core.annotation.Order;
 import org.springframework.http.HttpHeaders;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
+import com.flowgate.gateway.observe.GatewayMetrics;
+import com.flowgate.gateway.observe.SpanSupport;
+import io.micrometer.tracing.Span;
 
 @Component
 @Order(Ordered.LOWEST_PRECEDENCE)
@@ -18,10 +21,14 @@ public class ProxyFilter extends OncePerRequestFilter {
 
     private final RouteCache routes;
     private final ProxyService proxy;
+    private final GatewayMetrics metrics;
+    private final SpanSupport spans;
 
-    public ProxyFilter(RouteCache routes, ProxyService proxy) {
+    public ProxyFilter(RouteCache routes, ProxyService proxy, GatewayMetrics metrics, SpanSupport spans) {
         this.routes = routes;
         this.proxy = proxy;
+        this.metrics = metrics;
+        this.spans = spans;
     }
 
     @Override
@@ -41,8 +48,17 @@ public class ProxyFilter extends OncePerRequestFilter {
         }
         CachedRoute route = matched.get();
         byte[] inbound = request.getInputStream().readAllBytes();
-        try {
+        Span span = spans.start("proxy");
+        try (var scope = spans.scope(span)) {
+            spans.tag("proxy.route", route.routeKey());
             ProxyResult result = proxy.forward(route, request, inbound);
+            spans.tag("proxy.status", Integer.toString(result.status()));
+            spans.tag("proxy.cache", result.cacheHit() ? "hit" : "miss");
+            spans.tag("proxy.canary", Boolean.toString(result.canary()));
+            if (result.upstream() != null) {
+                spans.tag("proxy.upstream", result.upstream());
+            }
+            metrics.proxied(route.routeKey(), result.status(), result.cacheHit(), result.canary());
             response.setStatus(result.status());
             response.setHeader("X-Flowgate-Route", route.routeKey());
             response.setHeader("X-Flowgate-Cache", result.cacheHit() ? "HIT" : "MISS");
@@ -61,9 +77,13 @@ public class ProxyFilter extends OncePerRequestFilter {
                 response.getOutputStream().write(result.body());
             }
         } catch (IOException ex) {
+            span.error(ex);
             throw ex;
         } catch (Exception ex) {
+            span.error(ex);
             throw new ServletException(ex);
+        } finally {
+            span.end();
         }
     }
 }

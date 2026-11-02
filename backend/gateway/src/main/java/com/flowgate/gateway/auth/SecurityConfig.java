@@ -36,6 +36,7 @@ public class SecurityConfig {
                                             cors.setExposedHeaders(
                                                     List.of(
                                                             "X-Correlation-Id",
+                                                            "X-Trace-Id",
                                                             "X-RateLimit-Limit",
                                                             "X-RateLimit-Remaining",
                                                             "X-Flowgate-Route",
@@ -51,7 +52,9 @@ public class SecurityConfig {
                                                 "/api/v1/auth/**",
                                                 "/api/v1/meta",
                                                 "/api/v1/limited",
+                                                "/api/v1/metrics/stream",
                                                 "/actuator/health",
+                                                "/actuator/prometheus",
                                                 "/error")
                                         .permitAll()
                                         .requestMatchers(HttpMethod.GET, "/api/v1/rules/**", "/api/v1/routes/**", "/api/v1/audit/**")

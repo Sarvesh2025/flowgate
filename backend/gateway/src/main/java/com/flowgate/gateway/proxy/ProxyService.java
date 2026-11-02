@@ -1,5 +1,6 @@
 package com.flowgate.gateway.proxy;
 
+import com.flowgate.gateway.observe.SpanSupport;
 import io.github.resilience4j.bulkhead.Bulkhead;
 import io.github.resilience4j.bulkhead.BulkheadFullException;
 import io.github.resilience4j.bulkhead.BulkheadRegistry;
@@ -11,6 +12,8 @@ import io.github.resilience4j.retry.Retry;
 import io.github.resilience4j.retry.RetryRegistry;
 import io.github.resilience4j.timelimiter.TimeLimiter;
 import io.github.resilience4j.timelimiter.TimeLimiterRegistry;
+import io.micrometer.context.ContextSnapshotFactory;
+import io.micrometer.tracing.Span;
 import jakarta.servlet.http.HttpServletRequest;
 import java.time.Duration;
 import java.util.Base64;
@@ -20,6 +23,7 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeoutException;
 import java.util.function.Supplier;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
@@ -56,9 +60,11 @@ public class ProxyService {
     private final RetryRegistry retries;
     private final BulkheadRegistry bulkheads;
     private final TimeLimiterRegistry timers;
+    private final SpanSupport spans;
+    private final ContextSnapshotFactory snapshots = ContextSnapshotFactory.builder().build();
 
     public ProxyService(
-            WebClient proxyWebClient,
+            @Qualifier("proxyWebClient") WebClient proxyWebClient,
             LoadBalancer loadBalancer,
             TargetHealth health,
             RouteCache routes,
@@ -67,7 +73,8 @@ public class ProxyService {
             CircuitBreakerRegistry breakers,
             RetryRegistry retries,
             BulkheadRegistry bulkheads,
-            TimeLimiterRegistry timers) {
+            TimeLimiterRegistry timers,
+            SpanSupport spans) {
         this.webClient = proxyWebClient;
         this.loadBalancer = loadBalancer;
         this.health = health;
@@ -78,6 +85,7 @@ public class ProxyService {
         this.retries = retries;
         this.bulkheads = bulkheads;
         this.timers = timers;
+        this.spans = spans;
     }
 
     public ProxyResult forward(CachedRoute route, HttpServletRequest request, byte[] inbound)
@@ -85,6 +93,7 @@ public class ProxyService {
         if ("GET".equalsIgnoreCase(request.getMethod()) && props.getCacheTtlSeconds() > 0) {
             String cached = redis.opsForValue().get(cacheKey(request));
             if (cached != null) {
+                spans.tag("proxy.cache", "hit");
                 return decodeCache(cached);
             }
         }
@@ -116,7 +125,16 @@ public class ProxyService {
 
         Callable<ProxyResult> timed =
                 TimeLimiter.decorateFutureSupplier(
-                        limiter, () -> CompletableFuture.supplyAsync(decorated));
+                        limiter,
+                        () -> {
+                            var snapshot = snapshots.captureAll();
+                            return CompletableFuture.supplyAsync(
+                                    () -> {
+                                        try (var ignored = snapshot.setThreadLocals()) {
+                                            return decorated.get();
+                                        }
+                                    });
+                        });
         try {
             ProxyResult result = timed.call();
             if (!result.cacheHit()
@@ -145,16 +163,27 @@ public class ProxyService {
             uri = uri + "?" + request.getQueryString();
         }
         byte[] body = inbound == null ? new byte[0] : inbound;
-        ResponseEntity<byte[]> entity =
-                webClient
-                        .method(HttpMethod.valueOf(request.getMethod()))
-                        .uri(uri)
-                        .headers(headers -> copyRequestHeaders(request, headers, route.routeKey()))
-                        .body(body.length == 0 ? BodyInserters.empty() : BodyInserters.fromValue(body))
-                        .retrieve()
-                        .onStatus(status -> false, response -> reactor.core.publisher.Mono.empty())
-                        .toEntity(byte[].class)
-                        .block(Duration.ofMillis(props.getReadTimeoutMs()));
+        Span span = spans.start("proxy.upstream");
+        ResponseEntity<byte[]> entity;
+        try (var scope = spans.scope(span)) {
+            spans.tag("proxy.upstream", target.url());
+            spans.tag("http.url", uri);
+            entity =
+                    webClient
+                            .method(HttpMethod.valueOf(request.getMethod()))
+                            .uri(uri)
+                            .headers(headers -> copyRequestHeaders(request, headers, route.routeKey()))
+                            .body(body.length == 0 ? BodyInserters.empty() : BodyInserters.fromValue(body))
+                            .retrieve()
+                            .onStatus(status -> false, response -> reactor.core.publisher.Mono.empty())
+                            .toEntity(byte[].class)
+                            .block(Duration.ofMillis(props.getReadTimeoutMs()));
+        } catch (RuntimeException ex) {
+            span.error(ex);
+            throw ex;
+        } finally {
+            span.end();
+        }
         if (entity == null) {
             health.mark(target.id(), false);
             throw new UpstreamFailure(502, "empty upstream response");

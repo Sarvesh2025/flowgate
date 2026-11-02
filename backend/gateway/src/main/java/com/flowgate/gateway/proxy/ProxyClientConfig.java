@@ -10,6 +10,8 @@ import io.github.resilience4j.timelimiter.TimeLimiterConfig;
 import io.github.resilience4j.timelimiter.TimeLimiterRegistry;
 import io.netty.channel.ChannelOption;
 import java.time.Duration;
+import io.micrometer.observation.ObservationRegistry;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.client.reactive.ReactorClientHttpConnector;
@@ -21,14 +23,23 @@ import reactor.netty.http.client.HttpClient;
 public class ProxyClientConfig {
 
     @Bean
-    WebClient proxyWebClient(ProxyProperties props) {
+    @Qualifier("proxyWebClient")
+    WebClient proxyWebClient(ProxyProperties props, ObservationRegistry observations) {
+        return webClient(props).observationRegistry(observations).build();
+    }
+
+    @Bean
+    @Qualifier("healthWebClient")
+    WebClient healthWebClient(ProxyProperties props) {
+        return webClient(props).build();
+    }
+
+    private static WebClient.Builder webClient(ProxyProperties props) {
         HttpClient httpClient =
                 HttpClient.create()
                         .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, props.getConnectTimeoutMs())
                         .responseTimeout(Duration.ofMillis(props.getReadTimeoutMs()));
-        return WebClient.builder()
-                .clientConnector(new ReactorClientHttpConnector(httpClient))
-                .build();
+        return WebClient.builder().clientConnector(new ReactorClientHttpConnector(httpClient));
     }
 
     @Bean

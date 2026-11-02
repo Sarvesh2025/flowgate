@@ -1,6 +1,7 @@
 package com.flowgate.gateway.proxy;
 
 import java.time.Duration;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.client.WebClient;
@@ -12,10 +13,11 @@ public class UpstreamHealthChecker {
     private final TargetHealth health;
     private final WebClient webClient;
 
-    public UpstreamHealthChecker(RouteCache routes, TargetHealth health, WebClient proxyWebClient) {
+    public UpstreamHealthChecker(
+            RouteCache routes, TargetHealth health, @Qualifier("healthWebClient") WebClient healthWebClient) {
         this.routes = routes;
         this.health = health;
-        this.webClient = proxyWebClient;
+        this.webClient = healthWebClient;
     }
 
     @Scheduled(fixedDelayString = "${flowgate.proxy.health-interval-ms:10000}")

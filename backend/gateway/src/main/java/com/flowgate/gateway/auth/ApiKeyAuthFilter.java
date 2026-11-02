@@ -1,5 +1,7 @@
 package com.flowgate.gateway.auth;
 
+import com.flowgate.gateway.observe.SpanSupport;
+import io.micrometer.tracing.Span;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -17,9 +19,11 @@ import org.springframework.web.server.ResponseStatusException;
 public class ApiKeyAuthFilter extends OncePerRequestFilter {
 
     private final ApiKeyService keys;
+    private final SpanSupport spans;
 
-    public ApiKeyAuthFilter(ApiKeyService keys) {
+    public ApiKeyAuthFilter(ApiKeyService keys, SpanSupport spans) {
         this.keys = keys;
+        this.spans = spans;
     }
 
     @Override
@@ -28,15 +32,24 @@ public class ApiKeyAuthFilter extends OncePerRequestFilter {
             throws ServletException, IOException {
         String raw = request.getHeader("X-API-Key");
         if (raw != null && !raw.isBlank()) {
-            try {
-                ApiKeyPrincipal principal = keys.authenticate(raw);
-                var auth =
-                        new UsernamePasswordAuthenticationToken(
-                                principal, null, List.of(new SimpleGrantedAuthority("ROLE_API")));
-                SecurityContextHolder.getContext().setAuthentication(auth);
-            } catch (ResponseStatusException ex) {
-                response.sendError(ex.getStatusCode().value(), ex.getReason());
-                return;
+            Span span = spans.start("auth");
+            try (var scope = spans.scope(span)) {
+                spans.tag("auth.method", "apikey");
+                try {
+                    ApiKeyPrincipal principal = keys.authenticate(raw);
+                    var auth =
+                            new UsernamePasswordAuthenticationToken(
+                                    principal, null, List.of(new SimpleGrantedAuthority("ROLE_API")));
+                    SecurityContextHolder.getContext().setAuthentication(auth);
+                    spans.tag("auth.outcome", "ok");
+                } catch (ResponseStatusException ex) {
+                    spans.tag("auth.outcome", "invalid");
+                    span.error(ex);
+                    response.sendError(ex.getStatusCode().value(), ex.getReason());
+                    return;
+                }
+            } finally {
+                span.end();
             }
         }
         chain.doFilter(request, response);

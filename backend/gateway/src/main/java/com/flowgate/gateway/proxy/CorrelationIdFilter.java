@@ -1,5 +1,6 @@
 package com.flowgate.gateway.proxy;
 
+import com.flowgate.gateway.observe.SpanSupport;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -13,11 +14,18 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 @Component
-@Order(Ordered.HIGHEST_PRECEDENCE)
+@Order(Ordered.HIGHEST_PRECEDENCE + 5)
 public class CorrelationIdFilter extends OncePerRequestFilter {
 
     public static final String HEADER = "X-Correlation-Id";
+    public static final String TRACE_HEADER = "X-Trace-Id";
     public static final String ATTR = "correlationId";
+
+    private final SpanSupport spans;
+
+    public CorrelationIdFilter(SpanSupport spans) {
+        this.spans = spans;
+    }
 
     @Override
     protected void doFilterInternal(
@@ -25,11 +33,17 @@ public class CorrelationIdFilter extends OncePerRequestFilter {
             throws ServletException, IOException {
         String id = request.getHeader(HEADER);
         if (id == null || id.isBlank()) {
-            id = UUID.randomUUID().toString();
+            String traceId = spans.traceId();
+            id = traceId == null || traceId.isBlank() ? UUID.randomUUID().toString() : traceId;
         }
         MDC.put(ATTR, id);
         request.setAttribute(ATTR, id);
         response.setHeader(HEADER, id);
+        spans.tag("correlation.id", id);
+        String traceId = spans.traceId();
+        if (traceId != null && !traceId.isBlank()) {
+            response.setHeader(TRACE_HEADER, traceId);
+        }
         try {
             chain.doFilter(request, response);
         } finally {
