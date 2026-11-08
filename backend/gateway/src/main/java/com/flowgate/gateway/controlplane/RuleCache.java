@@ -81,7 +81,8 @@ public class RuleCache {
                                             e.getAlgorithm(),
                                             e.getLimitCount(),
                                             e.getWindowMs(),
-                                            e.getPriority()))
+                                            e.getPriority(),
+                                            e.getRedisDownPolicy()))
                             .toList();
                 });
     }

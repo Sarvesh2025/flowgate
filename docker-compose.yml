@@ -25,6 +25,18 @@ services:
       timeout: 3s
       retries: 10
 
+  toxiproxy:
+    image: ghcr.io/shopify/toxiproxy:2.11.0
+    depends_on:
+      redis:
+        condition: service_healthy
+    ports:
+      - "8474:8474"
+      - "16379:16379"
+    volumes:
+      - ./observability/toxiproxy/redis.json:/config/redis.json:ro
+    command: ["-host", "0.0.0.0", "-config", "/config/redis.json"]
+
   prometheus:
     image: prom/prometheus:v2.55.1
     extra_hosts:

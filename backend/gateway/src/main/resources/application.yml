@@ -17,9 +17,12 @@ spring:
   data:
     redis:
       host: ${FLOWGATE_REDIS_HOST:localhost}
-      port: 6379
+      port: ${FLOWGATE_REDIS_PORT:6379}
+      timeout: 300ms
+      connect-timeout: 300ms
 
 flowgate:
+  instance-id: ${FLOWGATE_INSTANCE:a}
   jwt:
     secret: flowgate-dev-secret-change-me-32b!!
     expiration-ms: 900000
@@ -29,6 +32,8 @@ flowgate:
     algorithm: SLIDING_WINDOW_COUNTER
     capacity: 10
     window-ms: 1000
+    # FAIL_CLOSED | FAIL_OPEN — used when no DB rule matches
+    redis-down-policy: FAIL_CLOSED
   proxy:
     connect-timeout-ms: 200
     read-timeout-ms: 2000
