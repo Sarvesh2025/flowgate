@@ -22,8 +22,8 @@ The human owns every choice. Entries below that say **proposed (used in Phase 1)
 ## D-003 — Compose starts only Postgres and Redis
 
 - **Question:** Should `docker compose up` also start the Java apps?
-- **Choice (proposed, used in Phase 1):** infra only. Apps run with `./scripts/mvn.sh` (Dockerized Maven) until we add Dockerfiles in a later slice.
-- **Why:** fewer moving parts while you inspect Flyway and health.
+- **Choice (proposed, used in Phase 1, kept in Phase 10):** infra only. Apps still run with `./scripts/mvn.sh`. `docker/` has images for CI and optional `docker build`; Compose does not start the JVMs.
+- **Why:** seeded routes and chaos URLs are `localhost:8081/8082`. A gateway container would miss those without rewriting the control plane. Infra-in-Compose keeps the demo one command for Postgres/Redis.
 
 ## D-004 — Flyway schema exists before JPA entities
 

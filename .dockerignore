@@ -1,0 +1,11 @@
+**/target/classes
+**/target/test-classes
+**/target/generated-sources
+**/target/maven-status
+**/target/maven-archiver
+**/node_modules
+**/.next
+.git
+.cursor
+*.log
+frontend/.next
