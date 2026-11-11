@@ -21,6 +21,11 @@ public class MetricsStreamController {
         this.ring = ring;
     }
 
+    @GetMapping
+    public List<MetricsRing.Sample> snapshot() {
+        return ring.snapshot();
+    }
+
     @GetMapping(path = "/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public SseEmitter stream() {
         SseEmitter emitter = new SseEmitter(0L);

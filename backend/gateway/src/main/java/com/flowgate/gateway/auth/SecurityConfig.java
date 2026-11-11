@@ -52,6 +52,7 @@ public class SecurityConfig {
                                                 "/api/v1/auth/**",
                                                 "/api/v1/meta",
                                                 "/api/v1/limited",
+                                                "/api/v1/metrics",
                                                 "/api/v1/metrics/stream",
                                                 "/actuator/health",
                                                 "/actuator/prometheus",

@@ -73,5 +73,18 @@ services:
       - prometheus
       - jaeger
 
+  mcp:
+    build:
+      context: .
+      dockerfile: mcp/Dockerfile
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    environment:
+      FLOWGATE_URL: http://host.docker.internal:8080
+      FLOWGATE_USER: operator
+      FLOWGATE_PASSWORD: operator123
+    ports:
+      - "8090:8090"
+
 volumes:
   flowgate_pg:

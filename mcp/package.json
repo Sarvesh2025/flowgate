@@ -1,0 +1,9 @@
+{
+  "name": "flowgate-mcp",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node src/index.js",
+    "mcp": "node src/index.js --stdio"
+  }
+}

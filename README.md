@@ -20,13 +20,28 @@ cd frontend && npm install && npm run dev
 
 Login at http://127.0.0.1:3001 — `admin` / `admin123`.
 
+MCP sidecar (off the hot path, operator login, **never writes rules**). Gateway must be up:
+
+```bash
+docker compose up -d --build mcp
+# or: cd mcp && npm start
+
+curl -s localhost:8090/health
+curl -s localhost:8090/rules
+curl -s -X POST localhost:8090/explain
+curl -s -X POST localhost:8090/draft-rule -H 'Content-Type: application/json' \
+  -d '{"text":"limit to 5 per second fail closed"}'
+```
+
+Stdio MCP for Cursor: `node mcp/src/index.js --stdio`. Optional `OPENAI_API_KEY` for real wording; without it, explain/draft are deterministic stubs. Paste a draft into the rules UI to apply.
+
 ```bash
 curl -s localhost:8080/api/v1/meta
 curl -sD - localhost:8080/api/v1/limited | head
 curl -sD - localhost:8080/gw/orders | head
 ```
 
-Ports: gateway `8080` (replica `8083`), orders `8081`, payments `8082`, UI `3001`, Postgres `5432`, Redis `6379`, Toxiproxy `16379` / `8474`, Prometheus `9090`, Grafana `3000` (admin/admin), Jaeger `16686`.
+Ports: gateway `8080` (replica `8083`), orders `8081`, payments `8082`, UI `3001`, MCP `8090`, Postgres `5432`, Redis `6379`, Toxiproxy `16379` / `8474`, Prometheus `9090`, Grafana `3000` (admin/admin), Jaeger `16686`.
 
 Two instances share Redis:
 
